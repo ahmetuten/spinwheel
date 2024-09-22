@@ -28,7 +28,6 @@ var copy_link = document.getElementById('copy-link');
 var templates = document.getElementById('templates');
 var clipboard = document.getElementById('clipboard');
 
-
 var mobile_break = 425;
 var desktop_canvas_size = 500;
 var mobile_canvas_size = 500;
@@ -51,38 +50,92 @@ var is_mobile = false;
 var last_width = 0;
 var dirty = false;
 
-function setup() {
-  clipboard.style.opacity = 0;
-  clipboard.style.width = 0;
-  clipboard.style.height = 0;
-  CANVAS_MID_X = canvas.width / 2;
-  CANVAS_MID_Y = canvas.height / 2;
-  WHEEL_RADIUS = CANVAS_MID_X * WHEEL_PERCENTAGE;
-  lastTime = Date.now();
+var savedWheels = JSON.parse(localStorage.getItem('savedWheels')) || {};
+var savedWheelsList = document.getElementById('saved-wheels-list');
+var wheelNameInput = document.getElementById('wheel-name-input');
+var saveWheelButton = document.getElementById('save-wheel');
 
-  var saved_list = JSON.parse(localStorage.getItem('wheel_items'));
+function updateSavedWheelsList() {
+    savedWheelsList.innerHTML = '';
+    Object.keys(savedWheels).forEach(function(wheelName) {
+        var li = document.createElement('li');
+        
+        var nameSpan = document.createElement('span');
+        nameSpan.textContent = wheelName;
+        nameSpan.onclick = function() {
+            nameList = savedWheels[wheelName];
+            refreshList();
+        };
+        li.appendChild(nameSpan);
 
-  if (!saved_list || !saved_list.length) {
-    nameList = name_lists[getRandomInt(0, name_lists.length)];
-  } else {
-    nameList = saved_list;
-  }
+        var deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.className = 'delete-wheel';
+        deleteButton.onclick = function(event) {
+            event.stopPropagation();
+            deleteWheel(wheelName);
+        };
+        li.appendChild(deleteButton);
 
-  var hash = window.location.hash;
-  var hashString = hash.substr(1, hash.length - 1);
-  if (hashString.length) {
-    var queryList = JSON.parse(decodeURIComponent(hashString));
-    if (queryList.length) {
-      nameList = queryList;
+        savedWheelsList.appendChild(li);
+    });
+}
+
+function deleteWheel(wheelName) {
+    if (confirm('Are you sure you want to delete this wheel?')) {
+        delete savedWheels[wheelName];
+        localStorage.setItem('savedWheels', JSON.stringify(savedWheels));
+        updateSavedWheelsList();
     }
-  }
+}
 
-  checkIfMobile();
-  resizeCanvas();
-  registerInputListeners();
-  renderList();
-  loop();
-  refreshList();
+function saveCurrentWheel() {
+    var wheelName = wheelNameInput.value.trim();
+    if (wheelName && nameList.length > 0) {
+        savedWheels[wheelName] = nameList.slice();
+        localStorage.setItem('savedWheels', JSON.stringify(savedWheels));
+        updateSavedWheelsList();
+        wheelNameInput.value = '';
+    }
+}
+
+saveWheelButton.onclick = saveCurrentWheel;
+
+updateSavedWheelsList();
+
+function setup() {
+    clipboard.style.opacity = 0;
+    clipboard.style.width = 0;
+    clipboard.style.height = 0;
+    CANVAS_MID_X = canvas.width / 2;
+    CANVAS_MID_Y = canvas.height / 2;
+    WHEEL_RADIUS = CANVAS_MID_X * WHEEL_PERCENTAGE;
+    lastTime = Date.now();
+
+    var saved_list = JSON.parse(localStorage.getItem('wheel_items'));
+
+    if (!saved_list || !saved_list.length) {
+        nameList = name_lists[getRandomInt(0, name_lists.length)];
+    } else {
+        nameList = saved_list;
+    }
+
+    var hash = window.location.hash;
+    var hashString = hash.substr(1, hash.length - 1);
+    if (hashString.length) {
+        var queryList = JSON.parse(decodeURIComponent(hashString));
+        if (queryList.length) {
+            nameList = queryList;
+        }
+    }
+
+    checkIfMobile();
+    resizeCanvas();
+    registerInputListeners();
+    renderList();
+    loop();
+    refreshList();
+    updateSavedWheelsList();
 }
 
 function refreshList() {
